@@ -1,5 +1,5 @@
 # pyusbee
-Python tool interfacing the USBEE DX pod
+Python tool interfacing the USBEE DX pod on Windows
 
 This tool captures the data from the USB DX pod and stores it into a VCD file that can be specified at the command line.
 
