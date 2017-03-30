@@ -144,7 +144,7 @@ finish = False
 
 class gtkwaveshm:
     WAVE_PARTIAL_VCD_RING_BUFFER_SIZE = 1024*1024
-    def __init__(self):
+    def __init__(self, idnumber):
         # code from gtkwave:
         #/* size *must* match in gtkwave */
         #define WAVE_PARTIAL_VCD_RING_BUFFER_SIZE (1024*1024)
@@ -155,7 +155,7 @@ class gtkwaveshm:
         #{
         #    buf_top = buf_curr = buf = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, WAVE_PARTIAL_VCD_RING_BUFFER_SIZE);
         #    memset(buf, 0, WAVE_PARTIAL_VCD_RING_BUFFER_SIZE);
-        self.shm = mmap.mmap(0, self.WAVE_PARTIAL_VCD_RING_BUFFER_SIZE, "shmidcat%d"%(23,))
+        self.shm = mmap.mmap(0, self.WAVE_PARTIAL_VCD_RING_BUFFER_SIZE, "shmidcat%d"%(idnumber,))
         # clear the shm
         for i in range(1024):
             self.shm.write("\x00" * 1024)
@@ -238,7 +238,7 @@ class gtkwaveshm:
                 self.put_32(p + length + 1, 0) # next len
                 self.put_8(self.buf_curr, 1) # current valid
                 self.buf_curr = inc_pos(self.buf_curr, 1 + 4 + length)
-                print("New buff : x%x"%self.buf_curr)
+#                print("New buff : x%x"%self.buf_curr)
                 break
 
     def close(self):
@@ -254,7 +254,7 @@ def usbee_thread(args, q):
     ClockMode = ctypes.c_uint (2)
     
     if args.outfile == None:
-        f = gtkwaveshm()
+        f = gtkwaveshm(int(str(args.pod), 16))
     else:
         f = args.outfile
     r = StartExtraction (SampleRate, PodNumber, ClockMode)
@@ -272,7 +272,14 @@ def usbee_thread(args, q):
         f.write("    Sampling rate = %d\n"%args.samplerate)
         f.write("$end\n")
         f.write("$timescale 1ns $end\n")
-        f.write("$var wire 8 ! sample $end\n")
+        f.write("$var wire 1 0 sig0 $end\n")
+        f.write("$var wire 1 1 sig1 $end\n")
+        f.write("$var wire 1 2 sig2 $end\n")
+        f.write("$var wire 1 3 sig3 $end\n")
+        f.write("$var wire 1 4 sig4 $end\n")
+        f.write("$var wire 1 5 sig5 $end\n")
+        f.write("$var wire 1 6 sig6 $end\n")
+        f.write("$var wire 1 7 sig7 $end\n")
         f.write("$enddefinitions $end\n")
 
         SAMPLE_BUFFER_LEN = 0x0100000
@@ -285,8 +292,9 @@ def usbee_thread(args, q):
         last_value = -1
         
         # generate the translation table for the sample (0=b00000000 1=b000000001 ...)
-        sample = map(lambda x: "b{0:b} !\n".format(x), range(256))
-        
+        #sample = map(lambda x: "b{0:b} !\n".format(x), range(256))
+        sample = map(lambda x: str(x) + "\n", range(8))
+
         # for the time being, just stop on the first transition
         while not finish:
             buflen = ExtractionBufferCount()
@@ -296,7 +304,7 @@ def usbee_thread(args, q):
                     buflen = SAMPLE_BUFFER_LEN
                 r = GetNextData(b, buflen)
                 if ord(r) == 1:
-                    cnt_buf.append((buflen, cnt_buf_empty))
+                    #cnt_buf.append((buflen, cnt_buf_empty))
                     cnt_buf_empty = 0
                     # check if there was a transition
                     for c in b[:buflen]:
@@ -304,12 +312,22 @@ def usbee_thread(args, q):
                         if c != last_value:
                             if last_value == -1:
                                 f.write("$dumpvars\n")
-                                f.write(sample[c])
+                                for i in range(8):
+                                    if c & (1 << i):
+                                        f.write("1"+sample[i])
+                                    else:
+                                        f.write("0"+sample[i])
                                 f.write("$end\n")
                             else:
                                 # convert the sample number to time
                                 f.write("#" + str(1000 * cnt / args.samplerate) + "\n")
-                                f.write(sample[c])
+                                x = c ^ last_value
+                                for i in range(8):
+                                    if x & (1 << i):
+                                        if c & (1 << i):
+                                            f.write("1"+sample[i])
+                                        else:
+                                            f.write("0"+sample[i])
                             last_value = c
                             
                         cnt += 1
@@ -320,7 +338,7 @@ def usbee_thread(args, q):
                 cnt_buf_empty += 1
         
         # print some statistics allowing to check the processor usage
-        print("cnt_buf = %d cnt = %d cnt_nobuf = %s"%(len(cnt_buf), cnt, cnt_buf))
+        #print("cnt_buf = %d cnt = %d cnt_nobuf = %s"%(len(cnt_buf), cnt, cnt_buf))
         
         f.close()
         r = StopExtraction ()
