@@ -271,7 +271,7 @@ def usbee_thread(args, q):
         f.write("$comment\n")
         f.write("    Sampling rate = %d\n"%args.samplerate)
         f.write("$end\n")
-        f.write("$timescale 1ns $end\n")
+        f.write("$timescale 1 ns $end\n")
         f.write("$var wire 1 0 sig0 $end\n")
         f.write("$var wire 1 1 sig1 $end\n")
         f.write("$var wire 1 2 sig2 $end\n")
