@@ -272,6 +272,7 @@ def usbee_thread(args, q):
         f.write("    Sampling rate = %d\n"%args.samplerate)
         f.write("$end\n")
         f.write("$timescale 1 ns $end\n")
+        f.write("$scope module capture $end\n")
         f.write("$var wire 1 0 sig0 $end\n")
         f.write("$var wire 1 1 sig1 $end\n")
         f.write("$var wire 1 2 sig2 $end\n")
@@ -280,6 +281,7 @@ def usbee_thread(args, q):
         f.write("$var wire 1 5 sig5 $end\n")
         f.write("$var wire 1 6 sig6 $end\n")
         f.write("$var wire 1 7 sig7 $end\n")
+        f.write("$upscope $end\n")
         f.write("$enddefinitions $end\n")
 
         SAMPLE_BUFFER_LEN = 0x0100000
