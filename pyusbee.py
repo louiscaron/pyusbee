@@ -313,6 +313,7 @@ def usbee_thread(args, q):
                         c = ord(c)
                         if c != last_value:
                             if last_value == -1:
+                                f.write("#0\n")
                                 f.write("$dumpvars\n")
                                 for i in range(8):
                                     if c & (1 << i):
