@@ -1,3 +1,4 @@
+import sys
 import argparse
 import cmd
 import ctypes
@@ -6,6 +7,7 @@ import threading
 import Queue
 import textwrap
 import mmap
+import itertools
 
 try:
     # Load DLL into memory.
@@ -303,14 +305,15 @@ def usbee_thread(args, q):
             if buflen > 0:
                 if buflen > SAMPLE_BUFFER_LEN:
                     print("The buffer is too large %d"%buflen)
+                    sys.stdout.flush()
                     buflen = SAMPLE_BUFFER_LEN
                 r = GetNextData(b, buflen)
                 if ord(r) == 1:
                     #cnt_buf.append((buflen, cnt_buf_empty))
                     cnt_buf_empty = 0
                     # check if there was a transition
-                    for c in b[:buflen]:
-                        c = ord(c)
+                    for k, g in itertools.groupby(b[:buflen]):
+                        c = ord(k)
                         if c != last_value:
                             if last_value == -1:
                                 f.write("#0\n")
@@ -332,8 +335,7 @@ def usbee_thread(args, q):
                                         else:
                                             f.write("0"+sample[i])
                             last_value = c
-                            
-                        cnt += 1
+                        cnt += len(list(g))
                 else:
                     print("Although the count was not null, the buffer was not retrieved")
             else:
@@ -354,6 +356,7 @@ class UsbeeCmd(cmd.Cmd):
     def do_stop(self, line):
         global finish
         finish = True
+        return True
 
     def do_EOF(self, line):
         global finish
