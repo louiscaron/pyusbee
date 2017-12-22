@@ -294,10 +294,20 @@ def usbee_thread(args, q):
         b = ctypes.create_string_buffer(SAMPLE_BUFFER_LEN)
         cnt = 0
         last_value = -1
-        
-        # generate the translation table for the sample (0=b00000000 1=b000000001 ...)
-        #sample = map(lambda x: "b{0:b} !\n".format(x), range(256))
-        sample = map(lambda x: str(x) + "\n", range(8))
+
+        def buildit(v):
+            x = v >> 8
+            c = v & 0xFF
+            s = ''
+            for i in range(8):
+                if x & (1 << i):
+                    if c & (1 << i):
+                        s += '1' + str(i) + '\n'
+                    else:
+                        s += '0' + str(i) + '\n'
+            return s
+
+        clist = map(buildit, range(256 * 256))
 
         # for the time being, just stop on the first transition
         while not finish:
@@ -318,22 +328,13 @@ def usbee_thread(args, q):
                             if last_value == -1:
                                 f.write("#0\n")
                                 f.write("$dumpvars\n")
-                                for i in range(8):
-                                    if c & (1 << i):
-                                        f.write("1"+sample[i])
-                                    else:
-                                        f.write("0"+sample[i])
+                                f.write(clist[0xFF00 + c])
                                 f.write("$end\n")
                             else:
                                 # convert the sample number to time
                                 f.write("#" + str(1000 * cnt / args.samplerate) + "\n")
                                 x = c ^ last_value
-                                for i in range(8):
-                                    if x & (1 << i):
-                                        if c & (1 << i):
-                                            f.write("1"+sample[i])
-                                        else:
-                                            f.write("0"+sample[i])
+                                f.write(clist[(x << 8) + c])
                             last_value = c
                         cnt += len(list(g))
                 else:
